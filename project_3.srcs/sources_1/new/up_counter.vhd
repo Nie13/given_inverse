@@ -62,9 +62,9 @@ architecture Behavioral of up_counter is
     signal tmp_a :std_logic_vector (31 downto 0);
     signal tmp_b :std_logic_vector (31 downto 0);
 begin
-COUNTER: PROCESS(clr, clk)  
+COUNTER: PROCESS(clr, clk, din)  
   BEGIN
-    IF(clr= '1') THEN  
+    IF(clr= '1' OR din'EVENT ) THEN  
       i_cnt<="0000"; 
       fin <= '0';
 
@@ -89,10 +89,11 @@ COUNTER: PROCESS(clr, clk)
 END PROCESS;
 
 
-CALCULATION:PROCESS( i_cnt, b_reg)
+CALCULATION:PROCESS( i_cnt)
 variable plus1, plus2, result : integer;
 --variable result : std_logic_vector(32 downto 0);
-BEGIN        
+BEGIN
+    if( i_cnt'EVENT) then      
     IF( i_cnt /= "0000" AND fin = '0') THEN
         for i in 0 to 31 loop
         ab_xor(i) <= a_reg(i) xor b_reg(i);
@@ -142,11 +143,13 @@ BEGIN
         result := plus1 + plus2;
         a <= std_logic_vector(to_unsigned(result, 33));
     end if;   
+    end if;
  END PROCESS;
  
  CONTINUE:PROCESS(a)
  variable plus1, plus2, result : integer;
  BEGIN
+ if (a'EVENT) then
     if (fin = '0' AND i_cnt /=  "0000") then   
         for i in 0 to 31 loop
             ba_xor(i) <= a(i) xor b_reg(i);
@@ -196,10 +199,11 @@ BEGIN
         result := plus1 + plus2;
         b <= std_logic_vector(to_unsigned(result, 33));
     END IF;
+end if;
 END PROCESS;
 f <= fin;
 ct <= i_cnt;
-dout(63 downto 32) <= a(31 downto 0);
-dout(31 downto 0) <= b(31 downto 0);
+dout(63 downto 32) <= ab_rot(31 downto 0);
+dout(31 downto 0) <= ba_rot(31 downto 0);
 
 end Behavioral;
