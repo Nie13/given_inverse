@@ -68,6 +68,8 @@ end process;
 test: process
 begin
 din <= (others => '0');
+clr <= '1';
+wait for 4ns;
 clr <= '0';
 wait;
 end process;

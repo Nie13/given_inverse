@@ -47,12 +47,12 @@ end up_counter;
 architecture Behavioral of up_counter is
     TYPE rom is ARRAY (0 to 25) of std_logic_vector (31 downto 0);
     CONSTANT sval: rom:= (x"00000000", x"00000000", x"46F8E8C5", x"460C6085", x"70F83B8A", x"284B8303", x"513E1454", x"F621ED22", x"3125065D", x"11A83A5D", x"D427686B", x"713AD82D", x"4B792F99", x"2799A4DD", x"A7901C49", x"DEDE871A", x"36C03196", x"A7EFC249", x"61A78BB8", x"3B0A1D2B", x"4DBFCA76", x"AE162167", x"30D76B0A", x"43192304", x"F6CC1431", x"65046380");
-    signal a: std_logic_vector (32 downto 0) ;
-    signal b: std_logic_vector (32 downto 0);
+    signal a: std_logic_vector (32 downto 0) := '0' & din (63 downto 32);
+    signal b: std_logic_vector (32 downto 0) := '0' & din (31 downto 0);
     signal i_cnt: std_logic_vector (3 downto 0) := "0000";
-    signal a_reg: std_logic_vector (31 downto 0) ;
+--    signal a_reg: std_logic_vector (31 downto 0) ;
 --    := din (63 downto 32) + sval(0);
-    signal b_reg: std_logic_vector (31 downto 0) ;
+--    signal b_reg: std_logic_vector (31 downto 0) ;
 --    := din (31 downto 0) + sval(1);
     signal fin: std_logic := '0';
     signal ab_xor: std_logic_vector (31 downto 0);
@@ -63,13 +63,15 @@ architecture Behavioral of up_counter is
 --    signal tmp_b :std_logic_vector (31 downto 0);
 begin
 COUNTER: PROCESS(clr, clk, din)  
+variable plus1, plus2, result : integer;
+variable plus1b, plus2b, resultb: integer;
   BEGIN
-    IF(clr= '1' OR din'EVENT ) THEN  
-      i_cnt<="0000"; 
+    IF(clr= '1' ) THEN  
+      i_cnt<="1111"; 
       fin <= '0';
 
---      a_reg <= din (63 downto 32) + sval (0);
---      b_reg <= din (31 downto 0) + sval (1);
+--      a <= '0' & din (63 downto 32);
+--      b <= '0' & din (31 downto 0);
     ELSIF (clk'EVENT AND clk='1') THEN
       if (i_cnt = "1100" or i_cnt = "1101") then
         i_cnt <= "1101";
@@ -77,11 +79,24 @@ COUNTER: PROCESS(clr, clk, din)
 --        dout(63 downto 32) <= a(31 downto 0);
 --        dout(31 downto 0) <= b(31 downto 0);
 --        dout(63 downto 0) <= a(31 downto 0) & b(31 downto 0);
---      elsif (i_cnt = "0001") then
---        i_cnt<= i_cnt+ "0001";
+      elsif (i_cnt = "0000") then
+--         plus1 := CONV_INTEGER(din(63 downto 32));
+--         plus2 := CONV_INTEGER(sval(0));
+--         result := plus1 + plus2;
+--         a <= std_logic_vector(to_unsigned(result, 33));
+--         plus1b := CONV_INTEGER(din(31 downto 0));
+--         plus2b := CONV_INTEGER(sval(1));
+--         resultb := plus1b + plus2b;
+--         b <= std_logic_vector(to_unsigned(resultb, 33));
+--          a <= (others => '0');
+--          b <= (others => '0');
+--        a <= din (63 downto 32) + sval (0);
+--        b <= din (31 downto 0) + sval (1);
+        i_cnt<= i_cnt+ "0001";
+    
       else
-        a_reg(31 downto 0) <= a(31 downto 0);
-        b_reg(31 downto 0) <= b(31 downto 0);
+--        a_reg(31 downto 0) <= a(31 downto 0);
+--        b_reg(31 downto 0) <= b(31 downto 0);
         i_cnt<= i_cnt+ "0001";
         
       end if;
@@ -93,25 +108,25 @@ CALCULATION:PROCESS(i_cnt)
 variable plus1, plus2, result : integer;
 --variable result : std_logic_vector(32 downto 0);
 BEGIN
-    if( i_cnt'EVENT) then      
-    IF( i_cnt /= "0000" AND fin = '0') THEN
+--    if( i_cnt'EVENT) then      
+    IF( i_cnt /= "0000" AND fin = '0' and i_cnt /= "1111") THEN
         for i in 0 to 31 loop
-        ab_xor(i) <= a_reg(i) xor b_reg(i);
+        ab_xor(i) <= a(i) xor b(i);
         end loop;
-     ELSIF(i_cnt = "0000") THEN
-        plus1 := CONV_INTEGER(din(63 downto 32));
-        plus2 := CONV_INTEGER(sval(0));
-        result := plus1 + plus2;
-        a <= std_logic_vector(to_unsigned(result, 33));
+--     ELSIF(i_cnt = "0000") THEN
+--        plus1 := CONV_INTEGER(din(63 downto 32));
+--        plus2 := CONV_INTEGER(sval(0));
+--        result := plus1 + plus2;
+--        a <= std_logic_vector(to_unsigned(result, 33));
     end if;
-    END IF;
+--    END IF;
 end process;
 
 SHIFT:PROCESS(ab_xor)
 BEGIN
-    if (ab_xor'EVENT) THEN
+--    if (ab_xor'EVENT) THEN
         --ab_xor <= a_reg XOR b_reg;
-        case b_reg (4 downto 0) is
+        case b (4 downto 0) is
             WHEN "00001"=> ab_rot<= ab_xor(30 DOWNTO 0)&ab_xor(31);
             WHEN "00010"=> ab_rot<=ab_xor(29 DOWNTO 0)&ab_xor(31 DOWNTO 30); 
             WHEN "00011"=> ab_rot<= ab_xor(28 DOWNTO 0) & ab_xor(31 DOWNTO 29);
@@ -145,40 +160,40 @@ BEGIN
             WHEN "11111" =>ab_rot<= ab_xor(0) & ab_xor(31 DOWNTO 1);
             WHEN OTHERS =>ab_rot<=ab_xor;
         end case;
-    END IF;
+--    END IF;
 END PROCESS;
 
 PLUS: PROCESS(ab_rot)
 variable plus1, plus2, result : integer;
 BEGIN
-    if (ab_rot'EVENT) THEN
+--    if (ab_rot'EVENT) THEN
         plus1 := CONV_INTEGER(ab_rot);
         plus2 := CONV_INTEGER(sval(CONV_INTEGER(i_cnt & '0')));
         result := plus1 + plus2;
         a <= std_logic_vector(to_unsigned(result, 33));
-    end if;
+--    end if;
  END PROCESS;
  
 CONTINUE:PROCESS(a)
 variable plus1, plus2, result : integer;
  BEGIN
- if (a'EVENT) then
-    if (fin = '0' AND i_cnt /=  "0000") then   
+-- if (a'EVENT) then
+    if (fin = '0' AND i_cnt /=  "0000" and i_cnt /= "1111") then   
         for i in 0 to 31 loop
-            ba_xor(i) <= a(i) xor b_reg(i);
+            ba_xor(i) <= a(i) xor b(i);
             end loop;
-    ELSIF (i_cnt = "0000") THEN
-        plus1 := CONV_INTEGER(din(31 downto 0));
-        plus2 := CONV_INTEGER(sval(1));
-        result := plus1 + plus2;
-        b <= std_logic_vector(to_unsigned(result, 33));
+--    ELSIF (i_cnt = "0000") THEN
+--        plus1 := CONV_INTEGER(din(31 downto 0));
+--        plus2 := CONV_INTEGER(sval(1));
+--        result := plus1 + plus2;
+--        b <= std_logic_vector(to_unsigned(result, 33));
     END IF;
-END IF;
+--END IF;
 END PROCESS;
 
 CONTINUE_SHIFT: PROCESS(ba_xor)
 BEGIN
-IF(ba_xor'EVENT)THEN
+--IF(ba_xor'EVENT)THEN
        -- ba_xor <= a XOR b_reg;
         case a (4 downto 0) is
             WHEN "00001"=> ba_rot<= ba_xor(30 DOWNTO 0)&ba_xor(31);
@@ -214,18 +229,18 @@ IF(ba_xor'EVENT)THEN
             WHEN "11111" =>ba_rot<= ba_xor(0) & ba_xor(31 DOWNTO 1);
             WHEN OTHERS =>ba_rot<=ba_xor;
          end case;
-     END IF;
+--     END IF;
  END PROCESS;
  
  CONTINUE_PLUS: PROCESS(ba_rot)
  variable plus1, plus2, result : integer;
  BEGIN
- IF(ba_rot'EVENT) THEN
+-- IF(ba_rot'EVENT) THEN
          plus1 := CONV_INTEGER(ba_rot);
          plus2 := CONV_INTEGER(sval(CONV_INTEGER(i_cnt & '1')));
          result := plus1 + plus2;     
          b <= std_logic_vector(to_unsigned(result, 33));    
-end if;
+--end if;
 END PROCESS;
 
 f <= fin;

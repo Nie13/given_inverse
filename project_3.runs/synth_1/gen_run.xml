@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<GenRun Id="synth_1" LaunchPart="xc7a35tcpg236-1" LaunchTime="1506921130">
+<GenRun Id="synth_1" LaunchPart="xc7a35tcpg236-1" LaunchTime="1507612816">
   <File Type="RDS-PROPCONSTRS" Name="up_counter_drc_synth.rpt"/>
   <File Type="PA-TCL" Name="up_counter.tcl"/>
   <File Type="RDS-RDS" Name="up_counter.vds"/>
