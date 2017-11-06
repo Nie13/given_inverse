@@ -41,6 +41,8 @@ entity up_counter is
         din: in std_logic_vector (63 downto 0);
         dout: out std_logic_vector (63 downto 0);
         ct: out std_logic_vector (3 downto 0);
+        di_vlld: in std_logic;
+        do_rdy: out std_logic;
         f: out std_logic );
 end up_counter;
 
@@ -59,8 +61,16 @@ architecture Behavioral of up_counter is
     signal ba_xor: std_logic_vector (31 downto 0);
     signal ab_rot: std_logic_vector (31 downto 0);
     signal ba_rot: std_logic_vector (31 downto 0);
+    
+    signal a_pre: std_logic_vector (31 downto 0);
+    signal b_pre: std_logic_vector (31 downto 0);
 --    signal tmp_a :std_logic_vector (31 downto 0);
 --    signal tmp_b :std_logic_vector (31 downto 0);
+
+    TYPE  StateType IS (ST_IDLE, ST_PRE_ROUND, ST_ROUND_OP, ST_READY);
+    SIGNAL  state:   StateType;
+
+
 begin
 COUNTER: PROCESS(clr, clk, din)  
 variable plus1, plus2, result : integer;
@@ -160,8 +170,67 @@ BEGIN
             WHEN "11111" =>ab_rot<= ab_xor(0) & ab_xor(31 DOWNTO 1);
             WHEN OTHERS =>ab_rot<=ab_xor;
         end case;
+        
+        a_pre<=din(63 DOWNTO 32) + sval(0);         
+        a<=ab_rot + sval(CONV_INTEGER(i_cnt & '0'));
 --    END IF;
 END PROCESS;
+
+
+PROCESS(clr, clk)  BEGIN
+        IF(clr='0') THEN
+           a_reg<=(OTHERS=>'0');
+        ELSIF(clk'EVENT AND clk='1') THEN
+            IF(state=ST_PRE_ROUND) THEN   a_reg<=a_pre;
+           ELSIF(state=ST_ROUND_OP) THEN   a_reg<=a;   END IF;
+        END IF;
+    END PROCESS;
+
+
+PROCESS(clr, clk)  BEGIN
+        IF(clr='0') THEN
+           b_reg<=(OTHERS=>'0');
+        ELSIF(clk'EVENT AND clk='1') THEN
+           IF(state=ST_PRE_ROUND) THEN   b_reg<=b_pre;
+          ELSIF(state=ST_ROUND_OP) THEN   b_reg<=b;   END IF;
+        END IF;
+    END PROCESS;   
+
+
+   PROCESS(clr, clk)
+   BEGIN
+      IF(clr='0') THEN
+         state<=ST_IDLE;
+      ELSIF(clk'EVENT AND clk='1') THEN
+         CASE state IS
+            WHEN ST_IDLE=>  IF(di_vld='1') THEN state<=ST_PRE_ROUND;  END IF;
+            WHEN ST_PRE_ROUND=>    state<=ST_ROUND_OP;
+            WHEN ST_ROUND_OP=>  IF(i_cnt="1100") THEN state<=ST_READY;  END IF;
+            WHEN ST_READY=>   state<=ST_IDLE;
+         END CASE;
+      END IF;
+   END PROCESS;
+
+
+-- round counter
+    PROCESS(clr, clk)  BEGIN
+        IF(clr='0') THEN
+           i_cnt<="0001";
+        ELSIF(clk'EVENT AND clk='1') THEN
+           IF(state=ST_ROUND_OP) THEN
+              IF(i_cnt="1100") THEN   i_cnt<="0001";
+              ELSE    i_cnt<=i_cnt+'1';    END IF;
+           END IF;
+        END IF;
+    END PROCESS;   
+
+
+dout<=a_reg & b_reg;
+
+    WITH state SELECT
+        do_rdy<=	'1' WHEN ST_READY,
+		'0' WHEN OTHERS;
+END rtl;
 
 PLUS: PROCESS(ab_rot)
 variable plus1, plus2, result : integer;
@@ -229,6 +298,9 @@ BEGIN
             WHEN "11111" =>ba_rot<= ba_xor(0) & ba_xor(31 DOWNTO 1);
             WHEN OTHERS =>ba_rot<=ba_xor;
          end case;
+         
+         b_pre <= din(31 DOWNTO 0) + sval(1);  
+         b<=ba_rot + sval(CONV_INTEGER(i_cnt & '1')); 
 --     END IF;
  END PROCESS;
  
